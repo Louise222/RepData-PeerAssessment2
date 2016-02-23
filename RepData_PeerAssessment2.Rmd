@@ -1,0 +1,101 @@
+---
+title: "Explore the NOAA Storm Database: finding characteristics of major storms and weather events in the U.S."
+author: "Yingjie Cao"
+date: "23 Feb 2016"
+output: 
+  html_document:
+    keep_md: true
+---
+
+#Synopsis
+
+In this report, we aim to analyze the impact of different weather events on public health and economy based on the storm database collected from the U.S. National Oceanic and Atmospheric Administration's (NOAA) from 1950 - 2011. We will use the estimates of fatalities, injuries, property damage and crop damage to decide which types of event are most harmful to the population health and economy. From these data, we found that tornado are most harmful with respect to both population health and economic consequences. Besides, excessive heat, tstm wind, flood, hail can also have large impacts.
+
+#Data Processing
+
+First you should download the Storm Data and make sure it is in your currect working repository.
+
+```{r}
+# basic setting
+library(dplyr)
+library(ggplot2)
+# load data
+StormData<-read.csv(bzfile("repdata-data-StormData.csv.bz2"))
+dim(StormData)
+str(StormData)
+```
+
+#Impact on Population Health
+
+Considering for population health, we focus on **FATALITIES** and **INJURIES**. So we want to see which types of events (as indicated in the **EVTYPE** variable) are most harmful with respect to these two factors.
+
+```{r}
+# fatalities
+StormData %>%
+  group_by(EVTYPE) %>%
+  summarise(fatalities = sum(FATALITIES)) %>%
+  filter(fatalities!=0) %>%
+  arrange(desc(fatalities))  %>%
+  head(10)
+# injuries
+StormData %>%
+  group_by(EVTYPE) %>%
+  summarise(injuries = sum(INJURIES)) %>%
+  filter(injuries!=0) %>%
+  arrange(desc(injuries))  %>%
+  head(10)
+```
+
+According to the above results, we know that **TORNADO** has the largest impact on public health, since it cause maximum impact on both fatalities and injuries.
+
+#Impact on Economic Consequences
+
+Considering for economic consequences, we focus on **PROPDMG** and **CROPDMG**. So we want to see which types of events (as indicated in the **EVTYPE** variable) are most harmful with respect to these two factors.
+
+```{r}
+# property damage
+StormData %>%
+  group_by(EVTYPE) %>%
+  summarise(property = sum(PROPDMG)) %>%
+  filter(property!=0) %>%
+  arrange(desc(property))  %>%
+  head(10)
+# crop demage
+StormData %>%
+  group_by(EVTYPE) %>%
+  summarise(crop = sum(CROPDMG)) %>%
+  filter(crop!=0) %>%
+  arrange(desc(crop))  %>%
+  head(10)
+```
+
+According to the above results, we know that **TORNADO, HAIL, FLASH FLOOD** are some main factors which cause large damage to economic consequences.
+
+#Results
+
+This time, we add the two factors together to see total impact. 
+
+```{r}
+StormData_pub <- mutate(StormData,pub=FATALITIES+INJURIES)
+group_data <- group_by(StormData_pub,EVTYPE)
+pub_health <- summarise(group_data,total=sum(pub),fatalities=sum(FATALITIES),injuries=sum(INJURIES))
+pub_health <- filter(pub_health,total!=0)
+pub_health <- arrange(pub_health,desc(total))
+pub_health <- head(pub_health,10)
+g <- ggplot(pub_health,aes(x=reorder(EVTYPE,-total),y=total))
+g + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + ggtitle("Impact of Major Storms and Weather Events on Public Health") + xlab("Major Storms and Weather Events") + ylab("Total Impact")
+```
+
+
+```{r}
+StormData_eco <- mutate(StormData,eco=PROPDMG+CROPDMG)
+group_data <- group_by(StormData_eco,EVTYPE)
+eco_damage <- summarise(group_data,total=sum(eco),property=sum(PROPDMG),crop=sum(CROPDMG))
+eco_damage <- filter(eco_damage,total!=0)
+eco_damage <- arrange(eco_damage,desc(total))
+eco_damage <- head(eco_damage,10)
+g <- ggplot(eco_damage,aes(x=reorder(EVTYPE,-total),y=total))
+g + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + ggtitle("Impact of Major Storms and Weather Events on Economic Consequences") + xlab("Major Storms and Weather Events") + ylab("Total Impact")
+```
+
+It can be shown that **TORNADO** has the largest impact both for public health and economic consequences.
